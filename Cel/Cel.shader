@@ -11,10 +11,12 @@
         _BaseMaskMap("_BaseMaskMap", 2D) = "white" {}
 
 
+        [Toggle]_UseMatcap("_UseMatcap", Float) = 0
+        [NoScaleOffset] _Matcap("Matcap", 2D) = "white" {}
+
         [Toggle]_UseNormalMap("_UseNormalMap", Float) = 0
         [NoScaleOffset] _NormalMap("Normals", 2D) = "bump" {}
         _NormalScale("Normal Scale", Range(0, 1)) = 1
-
 
         [Header(RimColor)] //边缘光
         [HDR]_RimColor("_RimColor", Color) = (1,1,1,1)
@@ -247,6 +249,7 @@
                 #endif
                 }
                 //--------------------------------------------
+
                 
 
                 // emission自发光
@@ -255,6 +258,14 @@
                 // 最终颜色
                 half3 color = indirectResult + mainLightResult + additionalLightSumResult + emissionResult;
                 //half3 color = indirectResult + mainLightResult + emissionResult;
+
+                //Matcap
+                if(_UseMatcap){
+                    float3 NtoV = TransformWorldToView(lightingData.normalWS);
+                    half3 matcapLookup = tex2D(_Matcap, NtoV * 0.5 + 0.5).rgb;    //采样
+                    matcapLookup += tex2D(_NormalMap, NtoV * 0.5 + 0.5).rgb;    //采样
+                    color += matcapLookup;
+                }
                 
                 // fog
                 half fogFactor = input.positionWSAndFogFactor.w;
@@ -324,13 +335,16 @@
 
                 output.positionCS = mul(UNITY_MATRIX_P, posVS); //裁剪空间坐标
 
+                output.color = input.vertexColor;
+
                 return output;
                 
             }
 
             half4 OutlinePassFragment(Varyings input) : SV_TARGET
             {
-                return half4(_OutlineColor,1);
+                //return half4(_OutlineColor,1);
+                return input.color;
             }
 
             ENDHLSL
